@@ -1,0 +1,41 @@
+
+typedef ubyte  __u8;
+typedef uint16 __u16;
+typedef uint32 __u32;
+typedef uint64 __u64;
+
+typedef ubyte  __le8;
+typedef uint16 __le16;
+typedef uint32 __le32;
+typedef uint64 __le64;
+
+LittleEndian();
+
+struct crypt_mnt_ftr{
+  __le32 magic;
+  __le16 major_version;
+  __le16 minor_version;
+  __le32 ftr_size;
+  __le32 flags;
+  __le32 keysize;
+  __le32 crypt_type;
+  __le64 fs_size;
+  __le32 failed_decrypt_count; 
+  unsigned char crypto_type_name[64]; 
+  __le32 spare2;
+  unsigned char master_key[48];
+  unsigned char salt[16];
+  __le64 persist_data_offset[2];
+  __le32 persist_data_size;
+  __le8  kdf_type;
+  __le8  N_factor;
+  __le8  r_factor;
+  __le8  p_factor;
+  __le64 encrypted_upto; 
+  __le8  hash_first_block[32];
+  __le8 keymaster_blob[2048];
+  __le32 keymaster_blob_size;
+  unsigned char scrypted_intermediate_key[32];
+};
+
+crypt_mnt_ftr  footer<name="Crypto Footer">;
