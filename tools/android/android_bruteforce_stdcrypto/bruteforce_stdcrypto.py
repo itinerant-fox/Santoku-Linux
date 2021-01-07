@@ -31,7 +31,8 @@ from struct import Struct
 from M2Crypto import EVP
 import hashlib
 import scrypt
-
+import codecs
+import struct
 
 HASH_COUNT    = 2000
 KEY_LEN_BYTES = 16
@@ -70,15 +71,15 @@ class QcomKmKeyBlob:
 		self.enc_priv_exp = self.enc_priv_exp[0:self.enc_priv_exp_size]
 
 	def dump(self):
-		print "QCOM key blob"
-		print '-------------------------'
-		print "magic num    : 0x%0.4X" % self.magic_num
-		print "version num  : %u" % self.version_num
-		print "modulus      : %s... [%d]" % (self.modulus.encode("hex").upper()[0:32], self.modulus_size)
-		print "pub exp      : %s" % self.pub_exp.encode("hex").upper()
-		print "IV           : %s" % self.iv.encode("hex").upper()
-		print "encr priv exp: %s...[%d]" % (self.enc_priv_exp.encode("hex").upper()[0:32], self.enc_priv_exp_size)
-		print "HMAC         : %s" % self.hmac.encode("hex").upper()
+		print("QCOM key blob")
+		print('-------------------------')
+		print("magic num    : 0x%0.4X" % self.magic_num)
+		print("version num  : %u" % self.version_num)
+		print("modulus      : %s... [%d]" % (self.modulus.encode("hex").upper()[0:32], self.modulus_size))
+		print("pub exp      : %s" % self.pub_exp.encode("hex").upper())
+		print("IV           : %s" % self.iv.encode("hex").upper())
+		print("encr priv exp: %s...[%d]" % (self.enc_priv_exp.encode("hex").upper()[0:32], self.enc_priv_exp_size))
+		print("HMAC         : %s" % self.hmac.encode("hex").upper())
 
 
 class CryptoFooter:
@@ -131,39 +132,40 @@ class CryptoFooter:
 			self.km_blob = self.km_blob[0:self.km_blob_size]
 
 	def dump(self):
-		print "Android FDE crypto footer"
-		print '-------------------------'
-		print 'Magic              :', "0x%0.8X" % self.ftrMagic
-		print 'Major Version      :', self.majorVersion
-		print 'Minor Version      :', self.minorVersion
-		print 'Footer Size        :', self.ftrSize, "bytes"
-		print 'Flags              :', "0x%0.8X" % self.flags
-		print 'Key Size           :', self.keySize * 8, "bits"
-		print 'Failed Decrypts    :', self.failedDecrypt
-		print 'Crypto Type        :', self.cryptoType.rstrip("\0")
-		print 'Encrypted Key      :', "0x" + self.cryptoKey.encode("hex").upper()
-		print 'Salt               :', "0x" + self.cryptoSalt.encode("hex").upper()
+		print("Android FDE crypto footer")
+		print('-------------------------')
+		print('Magic              :', "0x%0.8X" % self.ftrMagic)
+		print('Major Version      :', self.majorVersion)
+		print('Minor Version      :', self.minorVersion)
+		print('Footer Size        :', self.ftrSize, "bytes")
+		print('Flags              :', "0x%0.8X" % self.flags)
+		print('Key Size           :', self.keySize * 8, "bits")
+		print('Failed Decrypts    :', self.failedDecrypt)
+		print('Crypto Type        :', str(self.cryptoType).rstrip("\0"))
+		print('Encrypted Key      :', "0x" + str(codecs.encode(self.cryptoKey,"hex")).upper())
+		print('Salt               :', "0x" + str(codecs.encode(self.cryptoSalt,"hex")).upper())
 		if self.minorVersion >= SCRYPT_ADDED_MINOR:
-			if self.kdf in KDF_NAMES.keys():
-				print 'KDF                : %s' % KDF_NAMES[self.kdf]
+			if self.kdf in list(KDF_NAMES.keys()):
+				print('KDF                : %s' % KDF_NAMES[self.kdf])
 			else:
-				print 'KDF                :', ("unknown (%d)" % self.kdf)
-			print 'N_factor           :', "%u	(N=%u)" % (self.N_factor, self.N)
-			print 'r_factor           :', "%u	(r=%u)" % (self.r_factor, self.r)
-			print 'p_factor           :', "%u	(p=%u)" % (self.p_factor, self.p)
+				print('KDF                :', ("unknown (%d)" % self.kdf))
+			print('N_factor           :', "%u	(N=%u)" % (self.N_factor, self.N))
+			print('r_factor           :', "%u	(r=%u)" % (self.r_factor, self.r))
+			print('p_factor           :', "%u	(p=%u)" % (self.p_factor, self.p))
 		if self.minorVersion >= KDF_SCRYPT_KEYMASTER_UNPADDED:
-			print 'crypt type         : %s' % CRYPT_TYPES[self.crypt_type]
-			print 'FS size            : %u' % self.fsSize
-			print 'encrypted upto     : %u' % self.encrypted_upto
-			print 'hash first block   : %s' % self.hash_first_block.encode("hex").upper()
-			print 'keymaster blob     : %s...[%d]' % (self.km_blob.encode("hex").upper()[0:32], self.km_blob_size)
-			print 'scrypted IK        : %s' % self.scrypted_intermediate_key.encode("hex").upper()
+			print('crypt type         : %s' % CRYPT_TYPES[self.crypt_type])
+			print('FS size            : %u' % self.fsSize)
+			print('encrypted upto     : %u' % self.encrypted_upto)
+			print('hash first block   : %s' % str(codecs.encode(self.hash_first_block,"hex")).upper())
+			print('keymaster blob     : %s...[%d]' % (str(codecs.encode(self.km_blob,"hex")).upper()[0:32], self.km_blob_size))
+			print('scrypted IK        : %s' % str(codecs.encode(self.scrypted_intermediate_key,"hex")).upper())
 
-			print "\n"
-			qb = QcomKmKeyBlob()
-			qb.parse(self.km_blob)
-			qb.dump()
-		print '-------------------------'
+			print("\n")
+			if self.km_blob_size > 0:
+				qb = QcomKmKeyBlob()
+				qb.parse(self.km_blob)
+				qb.dump()
+		print('-------------------------')
 
 		
 		
@@ -172,74 +174,165 @@ def main(args):
 	maxpin_digits = 4
 	parseMagic = False
 
-	if len(args) < 3:
-		print 'Usage: python bruteforce_stdcrypto.py [header file] [footer file] (max PIN digits)'
-		print ''
-		print '[] = Mandatory'
-		print '() = Optional (default is 4)'
+	if len(args) < 2:
+		print('Usage: python bruteforce_stdcrypto.py [footer file] (header file) (max PIN digits)')
+		print('')
+		print('[] = Mandatory')
+		print('() = Optional (default is 4)')
 	else:
 		# use inputed filenames for the two files
-		footerFile    = args[2]
-		headerFile    = args[1]
+		footerFile    = args[1]
 		try:
-			if args[3] != None: 
+			if args[len(args)-1] != None: 
 				try:
 					maxpin_digits = int(args[3])
 					if maxpin_digits <= 3: 
-						print 'PIN has to be >= to 4 digits - defaulting your entered value to 4'
+						print('PIN has to be >= to 4 digits - defaulting your entered value to 4')
 						time.sleep(2)
 						maxpin_digits = 4
 				except: 
-					print 'You did not entered a valid maximum number of digits to bruteforce'
-					print '=> Defaulting your value to 4.'
+					print('Maximum number of digits to bruteforce')
+					print('=> Defaulting to 4.')
 					time.sleep(2)
 					maxpin_digits = 4
 			else: 
 			# default value
 				maxpin_digits = 4
 		except:
-			print 'Defaulting max PIN digits to 4'
+			print('Defaulting max PIN digits to 4')
 			time.sleep(2)
 			maxpin_digits = 4
 
 
 		assert path.isfile(footerFile), "Footer file '%s' not found." % footerFile
-		assert path.isfile(headerFile), "Header file '%s' not found." % headerFile
-		fileSize = path.getsize(footerFile)
-		assert (fileSize >= 16384), "Input file '%s' must be at least 16384 bytes" % footerFile
-		
-		# check headerFile
-		fileSize = path.getsize(headerFile)
-		# for the NULL padding check, we need at least 32 bytes
-		assert(fileSize > 31), "Header file '%s' must be at least 32 bytes" % headerFile
 
-		if fileSize >= 1087:
-			parseMagic = True;
-			# load the header data for testing the password
-			headerData = open(headerFile, 'rb').read(1088)
-		else:
-			parseMagic = False;
-			# load the header data for testing the password
-			headerData = open(headerFile, 'rb').read(32)
+		
+		fileSize = path.getsize(footerFile)
+		assert (fileSize >= 16384), "Footer Input file '%s' must be at least 16384 bytes" % footerFile
+		
+		if len(args) > 2 and args[2] != None:
+			headerFile    = args[2]
+			assert path.isfile(headerFile), "Header file '%s' not found." % headerFile
+			# check headerFile
+			fileSize = path.getsize(headerFile)
+			# for the NULL padding check, we need at least 32 bytes
+			assert(fileSize > 31), "Header file '%s' must be at least 32 bytes" % headerFile
+
+			if fileSize >= 1087:
+				parseMagic = True;
+				# load the header data for testing the password
+				headerData = open(headerFile, 'rb').read(1088)
+			else:
+				parseMagic = False;
+				# load the header data for testing the password
+				headerData = open(headerFile, 'rb').read(32)
 		
 		# retrive the key and salt from the footer file
 		cf = getCryptoData(footerFile)
 
-		for n in xrange(4, maxpin_digits+1):
-			result = bruteforcePIN(headerData, cf, n, parseMagic)
-			if result: 
-				print 'Found PIN!: ' + result
-				break
+		#result = checkPIN(headerData, cf, "1234", parseMagic)
+		#print(' Pin result: ' + str(result))
 
-def bruteforcePIN(headerData, cryptoFooter, maxdigits, parseMagic):
-	print 'Trying to Bruteforce Password... please wait'
+		if headerFile == None:
+			for n in range(4, maxpin_digits+1):
+				result = bruteforcePINonScryptedIK(cf, n, parseMagic)
+				if result: 
+					print('Found PIN!: ' + result)
+					break
+		else:
+			for n in range(4, maxpin_digits+1):
+				result = bruteforcePIN(headerData,cf , n, parseMagic)
+				if result: 
+					print('Found PIN!: ' + result)
+					break
+
+
+
+
+def bruteforcePINonScryptedIK(cryptoFooter, maxdigits, parseMagic):
+	print('Trying to Bruteforce Password... please wait')
 
 	# try all possible 4 to maxdigits digit PINs, returns value immediately when found 
-	for j in itertools.product(xrange(10),repeat=maxdigits):
+	for j in itertools.product(range(10),repeat=maxdigits):
 		
 		# decrypt password
 		passwdTry = ''.join(str(elem) for elem in j)		
-		print 'Trying: ' + passwdTry 
+		print('Trying: ' + passwdTry) 
+
+		# -- In case you prefer printing every 100 
+		#try: 
+		#	if (int(passwdTry) % 100) == 0:
+		#		print 'ok'
+		#		print 'Trying passwords from %d to %d' %(int(passwdTry),int(passwdTry)+100)
+		#except:
+		#	pass
+		
+		# make the decryption key from the password
+		decKey = ''
+		if cryptoFooter.kdf == KDF_PBKDF: 
+			decKey = decryptDecodePbkdf2Key(cryptoFooter, passwdTry)
+		elif cryptoFooter.kdf == KDF_SCRYPT:
+			decKey = calculateScryptedIK(cryptoFooter, passwdTry)
+		else:
+			raise Exception("Unknown or unsupported KDF: " + str(cryptoFooter.kdf))
+		
+		if str(codecs.encode(decKey[:len(cryptoFooter.scrypted_intermediate_key)],"hex")).upper() == str(codecs.encode(cryptoFooter.scrypted_intermediate_key,"hex")).upper():
+			return passwdTry
+
+	return None
+
+
+
+def checkPIN(headerData, cryptoFooter, passwdTry, parseMagic):
+	print('Trying to Bruteforce Password: ' + passwdTry)
+
+	# make the decryption key from the password
+	decKey = ''
+	if cryptoFooter.kdf == KDF_PBKDF: 
+		decKey = decryptDecodePbkdf2Key(cryptoFooter, passwdTry)
+	elif cryptoFooter.kdf == KDF_SCRYPT:
+		decKey = decryptDecodeScryptKey(cryptoFooter, passwdTry)
+	else:
+		raise Exception("Unknown or unsupported KDF: " + str(cryptoFooter.kdf))
+	
+
+	# try to decrypt the frist 32 bytes of the header data (we don't need the iv)
+	decData = decryptData(decKey,b'',headerData)
+
+	print('decData        : %s' % str(codecs.encode(decData,"hex")).upper())
+
+	# has the test worked?
+	if parseMagic:
+		# ext4 superblock MAGIC and NULL padding present
+		if codecs.encode(decData[1080:1082],"hex") == EXT4_MAGIC and decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+			print("DBG: parseMagic")
+			return passwdTry
+		# ext4 superblock MAGIC (0xef53, little endian) present
+		if codecs.encode(decData[1080:1082],"hex") == EXT4_MAGIC:
+			print("DBG: parseMagic")
+			return passwdTry
+		# NULL padding, after first block, present
+		elif decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+			print("DBG: parseMagic")
+			return passwdTry
+	else:
+		print("DBG: no parseMagic")
+		# headerFile not large enough, only check for NULL padding of ext4 superblock
+		if decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+			return passwdTry
+			
+	return False
+
+
+def bruteforcePIN(headerData, cryptoFooter, maxdigits, parseMagic):
+	print('Trying to Bruteforce Password... please wait')
+
+	# try all possible 4 to maxdigits digit PINs, returns value immediately when found 
+	for j in itertools.product(range(10),repeat=maxdigits):
+		
+		# decrypt password
+		passwdTry = ''.join(str(elem) for elem in j)		
+		print('Trying: ' + passwdTry) 
 
 		# -- In case you prefer printing every 100 
 		#try: 
@@ -259,26 +352,26 @@ def bruteforcePIN(headerData, cryptoFooter, maxdigits, parseMagic):
 			raise Exception("Unknown or unsupporeted KDF: " + str(cryptoFooter.kdf))
 		
 		# try to decrypt the frist 32 bytes of the header data (we don't need the iv)
-		decData = decryptData(decKey,"",headerData)
+		decData = decryptData(decKey,b'',headerData)
 
 		# has the test worked?
 		if parseMagic:
 			# ext4 superblock MAGIC and NULL padding present
-			if decData[1080:1082].encode("hex") == EXT4_MAGIC and decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
-				print "DBG: parseMagic"
+			if codecs.encode(decData[1080:1082],"hex") == EXT4_MAGIC and decData[16:32] == b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+				print("DBG: parseMagic")
 				return passwdTry
 			# ext4 superblock MAGIC (0xef53, little endian) present
-			if decData[1080:1082].encode("hex") == EXT4_MAGIC:
-				print "DBG: parseMagic"
+			if codecs.encode(decData[1080:1082],"hex") == EXT4_MAGIC:
+				print("DBG: parseMagic")
 				return passwdTry
 			# NULL padding, after first block, present
-			elif decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
-				print "DBG: parseMagic"
+			elif decData[16:32] == b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+				print("DBG: parseMagic")
 				return passwdTry
 		else:
-			print "DBG: no parseMagic"
+			print("DBG: no parseMagic")
 			# headerFile not large enough, only check for NULL padding of ext4 superblock
-			if decData[16:32] == "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
+			if decData[16:32] == b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0":
 				return passwdTry
 			
 	return None
@@ -308,18 +401,33 @@ def decryptDecodePbkdf2Key(cf,password):
 	
 	return decKey
 
+
+def calculateScryptedIK(cf,password):
+	derived = scrypt.hash(password, cf.cryptoSalt, cf.N, cf.r, cf.p)
+	key = derived[:KEY_LEN_BYTES]
+	iv = derived[KEY_LEN_BYTES:]
+	scrypted_intermediate_key = scrypt.hash(key, cf.cryptoSalt, cf.N, cf.r, cf.p)
+	print('scrypted IK_key        : %s' % str(codecs.encode(scrypted_intermediate_key,"hex")).upper())
+	return scrypted_intermediate_key
+
 def decryptDecodeScryptKey(cf,password):
 	derived = scrypt.hash(password, cf.cryptoSalt, cf.N, cf.r, cf.p)
 
 	key = derived[:KEY_LEN_BYTES]
 	iv = derived[KEY_LEN_BYTES:]
-
+	#print('key        : %s' % str(codecs.encode(key,"hex")).upper())
+	scrypted_intermediate_key = scrypt.hash(key, cf.cryptoSalt, cf.N, cf.r, cf.p)
+	scrypted_intermediate_key_iv = scrypt.hash(derived, cf.cryptoSalt, cf.N, cf.r, cf.p)
+	#print('scrypted IK_key        : %s' % str(codecs.encode(scrypted_intermediate_key,"hex")).upper())
+	#print('scrypted IK_key_iv     : %s' % str(codecs.encode(scrypted_intermediate_key_iv,"hex")).upper())
+	
 	# do the decrypt
 	cipher = EVP.Cipher(alg='aes_128_cbc', key=key, iv=iv, op=0) # 0 is DEC
 	cipher.set_padding(padding=0)
 	decKey = cipher.update(cf.cryptoKey)
 	decKey = decKey + cipher.final()
 	
+	#print('DKEY        : %s' % str(codecs.encode(decKey,"hex")).upper())
 	return decKey
 
 def decryptData(decKey,essiv,data):
